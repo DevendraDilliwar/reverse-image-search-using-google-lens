@@ -375,11 +375,11 @@ const ImageSearchPage: React.FC = () => {
                             <div className="flex gap-2">
                               <button className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                                 <Eye size={16} />
-                                View
+                                {/* View */}
                               </button>
                               <button className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                                 <Download size={16} />
-                                Download
+                                {/* Download */}
                               </button>
                             </div>
                           </td>
