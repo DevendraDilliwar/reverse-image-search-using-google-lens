@@ -105,6 +105,7 @@ export default function CopyrightChecker() {
                   checked={selectedRoutes.has(route)}
                   onChange={() => {
                     const updated = new Set(selectedRoutes)
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                     updated.has(route) ? updated.delete(route) : updated.add(route)
                     setSelectedRoutes(updated)
                   }}

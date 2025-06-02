@@ -19,7 +19,7 @@ export default function Navbar() {
     try {
       const supabase = createClient()
       await supabase.auth.signOut()
-      router.push('/login')
+      router.push('/auth/login')
       router.refresh()
     } catch (error) {
       console.error('Error signing out:', error)
