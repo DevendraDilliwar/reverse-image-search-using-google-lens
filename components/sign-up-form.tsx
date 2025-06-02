@@ -105,7 +105,7 @@ export function SignUpForm({
               </div>
               <div className="grid gap-6">
                 <div className="grid gap-3">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email</Label> 
                   <Input
                     id="email"
                     type="email"

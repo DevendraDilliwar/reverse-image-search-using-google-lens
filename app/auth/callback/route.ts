@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     try {
       await supabase.auth.exchangeCodeForSession(code)
       return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return NextResponse.redirect(`${requestUrl.origin}/auth/error?error=Could not authenticate user`)
     }
