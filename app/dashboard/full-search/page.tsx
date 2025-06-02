@@ -2,131 +2,179 @@
 
 import { useState } from 'react'
 
-export default function Home() {
-  const [url, setUrl] = useState('')
+export default function CopyrightChecker() {
+  const [siteUrl, setSiteUrl] = useState('')
+  const [routes, setRoutes] = useState<string[]>([])
+  const [selectedRoutes, setSelectedRoutes] = useState<Set<string>>(new Set())
+
   const [images, setImages] = useState<string[]>([])
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(false)
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set())
+
   const [results, setResults] = useState<Record<string, boolean>>({})
+  const [loadingStep, setLoadingStep] = useState<'idle' | 'crawl' | 'scrape' | 'check'>('idle')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setResults({})
-    setSelected(new Set())
-
-    const res = await fetch('/api/scrape', {
+  const handleCrawl = async () => {
+    setLoadingStep('crawl')
+    const res = await fetch('/api/crawl', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url: siteUrl }),
     })
     const data = await res.json()
-    setImages(data.images || [])
-    setLoading(false)
+    setRoutes(data.urls || [])
+    setSelectedRoutes(new Set())
+    setImages([])
+    setResults({})
+    setLoadingStep('idle')
   }
 
-  const toggleSelect = (img: string) => {
-    const newSet = new Set(selected)
-    newSet.has(img) ? newSet.delete(img) : newSet.add(img)
-    setSelected(newSet)
+  const handleScrape = async () => {
+    setLoadingStep('scrape')
+    const allImages = new Set<string>()
+    for (const url of selectedRoutes) {
+      const res = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      data.images?.forEach((img: string) => allImages.add(img))
+    }
+    setImages(Array.from(allImages))
+    setSelectedImages(new Set())
+    setResults({})
+    setLoadingStep('idle')
   }
 
-  const checkCopyright = async () => {
-    setChecking(true)
+  const handleCheck = async () => {
+    setLoadingStep('check')
     const res = await fetch('/api/tineye', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images: Array.from(selected) }),
+      body: JSON.stringify({ images: Array.from(selectedImages) }),
     })
     const data = await res.json()
     setResults(data.results)
-    setChecking(false)
+    setLoadingStep('idle')
   }
 
   return (
-    <main className="min-h-screen px-6 py-10 bg-gradient-to-tr from-slate-50 to-blue-100">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-center text-blue-700 mb-6">
-          🖼️ Image Copyright Checker
-        </h1>
+    <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">
+        🕵️‍♂️ Image Copyright Checker
+      </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
-          <input
-            type="url"
-            value={url}
-            required
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter website URL (https://...)"
-            className="flex-1 p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md transition"
-          >
-            {loading ? 'Scraping...' : 'Scrape Images'}
-          </button>
-        </form>
+      {/* STEP 1: Input URL and Crawl */}
+      <div className="mb-4 flex gap-4">
+        <input
+          type="url"
+          placeholder="https://example.com"
+          value={siteUrl}
+          onChange={(e) => setSiteUrl(e.target.value)}
+          className="w-full p-3 border border-gray-300 rounded"
+        />
+        <button
+          onClick={handleCrawl}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loadingStep === 'crawl' ? 'Crawling...' : 'Get URLs'}
+        </button>
+      </div>
 
-        {images.length > 0 && (
-          <div className="text-center mb-6">
+      {/* STEP 2: Select Routes */}
+      {routes.length > 0 && (
+        <>
+          <h2 className="text-xl font-semibold mb-2 text-blue-800">Step 2: Select Routes</h2>
+          <div className="flex justify-between items-center mb-2">
+            <span>{selectedRoutes.size} selected</span>
             <button
-              disabled={selected.size === 0 || checking}
-              onClick={checkCopyright}
-              className={`px-6 py-3 rounded-lg font-semibold transition ${
-                selected.size === 0 || checking
-                  ? 'bg-gray-400 text-white cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700 text-white shadow-md'
-              }`}
+              onClick={() => {
+                const all = new Set(selectedRoutes.size === routes.length ? [] : routes)
+                setSelectedRoutes(all)
+              }}
+              className="text-sm text-blue-600 underline"
             >
-              {checking ? 'Checking...' : 'Check Selected Images'}
+              {selectedRoutes.size === routes.length ? 'Unselect All' : 'Select All'}
             </button>
           </div>
-        )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+            {routes.map((route) => (
+              <label key={route} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-100">
+                <input
+                  type="checkbox"
+                  checked={selectedRoutes.has(route)}
+                  onChange={() => {
+                    const updated = new Set(selectedRoutes)
+                    updated.has(route) ? updated.delete(route) : updated.add(route)
+                    setSelectedRoutes(updated)
+                  }}
+                />
+                <span className="text-sm break-all">{route}</span>
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={handleScrape}
+            disabled={selectedRoutes.size === 0}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+          >
+            {loadingStep === 'scrape' ? 'Scraping...' : 'Scrape Selected Pages'}
+          </button>
+        </>
+      )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-          {images.map((img, i) => {
-            const isSelected = selected.has(img)
-            const isChecked = results[img]
-
-            return (
+      {/* STEP 3: Select Images */}
+      {images.length > 0 && (
+        <>
+          <h2 className="text-xl font-semibold mt-6 mb-2 text-blue-800">Step 3: Select Images</h2>
+          <div className="flex justify-between items-center mb-2">
+            <span>{selectedImages.size} selected</span>
+            <button
+              onClick={() => {
+                const all = new Set(selectedImages.size === images.length ? [] : images)
+                setSelectedImages(all)
+              }}
+              className="text-sm text-blue-600 underline"
+            >
+              {selectedImages.size === images.length ? 'Unselect All' : 'Select All'}
+            </button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {images.map((img, i) => (
               <div
                 key={i}
-                className={`relative cursor-pointer rounded-lg overflow-hidden shadow-lg transform transition hover:scale-105 border-2 ${
-                  isSelected ? 'border-blue-600' : 'border-transparent'
-                }`}
-                onClick={() => toggleSelect(img)}
+                className={`relative rounded overflow-hidden border-2 ${
+                  selectedImages.has(img) ? 'border-blue-500' : 'border-transparent'
+                } cursor-pointer hover:scale-105 transition`}
+                onClick={() => {
+                  const updated = new Set(selectedImages)
+                  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                  updated.has(img) ? updated.delete(img) : updated.add(img)
+                  setSelectedImages(updated)
+                }}
               >
-                <img
-                  src={img}
-                  alt={`img-${i}`}
-                  className="w-full h-40 object-cover"
-                />
-                <div className="absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-1">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    readOnly
-                    className="w-5 h-5"
-                  />
-                </div>
-
+                <img src={img} alt={`img-${i}`} className="w-full h-28 object-cover" />
                 {results[img] !== undefined && (
-                  <div
-                    className={`absolute bottom-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                      isChecked
-                        ? 'bg-red-600 text-white'
-                        : 'bg-green-600 text-white'
-                    }`}
+                  <span
+                    className={`absolute bottom-1 left-1 px-2 py-0.5 text-xs font-bold rounded ${
+                      results[img] ? 'bg-red-600' : 'bg-green-600'
+                    } text-white`}
                   >
-                    {isChecked ? 'COPYRIGHTED' : 'FREE'}
-                  </div>
+                    {results[img] ? 'Matches Found' : 'No Matches Found'}
+                  </span>
                 )}
               </div>
-            )
-          })}
-        </div>
-      </div>
-    </main>
+            ))}
+          </div>
+          <button
+            onClick={handleCheck}
+            disabled={selectedImages.size === 0}
+            className="mt-4 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:opacity-50"
+          >
+            {loadingStep === 'check' ? 'Checking...' : 'Check Copyright'}
+          </button>
+        </>
+      )}
+    </div>
   )
 }
