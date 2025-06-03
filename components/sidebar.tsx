@@ -39,8 +39,8 @@ const menuItems = [
     description: 'Create new images'
   },
    { 
-    name: 'Buy Credits', 
-    href: '/dashboard/buy-credits', 
+    name: 'Subscription', 
+    href: '/dashboard/subscription', 
     icon: ScanSearch,
     description: 'Comprehensive search'
   },
